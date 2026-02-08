@@ -1,102 +1,70 @@
-# Sahayak Frontend - Assistive Navigation Application
+# Sahayak Project - Full Assistive Navigation Suite
 
-This is the frontend application for **Sahayak**, a comprehensive assistive technology solution designed to help visually impaired users navigate their environment safely and independently.
+**Sahayak** is a comprehensive assistive technology solution designed to help visually impaired users navigate their environment safely and independently. This repository contains the full source code for both the **Frontend** application and the **Backend** server.
 
-## 🚀 Features
+## 👥 Team: Bombay.Bytes
 
-- **Voice-First Interface**: 
-  - Complete hands-free navigation using voice commands ("Navigate", "SOS", "Detect").
-  - Real-time voice feedback for all actions and environment descriptions.
-  - "Always On" continuous listening mode.
-
-- **Real-time Object Detection**: 
-  - Integrated **TensorFlow.js** (COCO-SSD) for offline, real-time object detection directly in the browser.
-  - Auditory announcements of detected obstacles (e.g., "Person", "Chair", "Car").
-
-- **Navigation & Maps**:
-  - GPS-based outdoor navigation using **Leaflet** and OpenStreetMap.
-  - Turn-by-turn guidance context.
-  - "End Navigation" safety controls.
-
-- **Emergency SOS**:
-  - One-tap or voice-activated SOS mode.
-  - Simulates sending emergency alerts and sharing location.
-
-- **Visual Accessibility**:
-  - High-contrast UI with large touch targets.
-  - Haptic feedback integration for interactions.
-
-## 🛠️ Tech Stack
-
-- **Framework**: React 18
-- **Build Tool**: Vite
-- **Language**: TypeScript
-- **Styling**: TailwindCSS
-- **AI/ML**: TensorFlow.js (@tensorflow-models/coco-ssd)
-- **Maps**: Leaflet / React-Leaflet
-- **Icons**: Lucide React
-
-## 📂 Project Structure
-
-```
-project/
-├── src/
-│   ├── components/     # UI Components (Home, Navigation, Detection, etc.)
-│   ├── contexts/       # Global State (VoiceContext, NavigationContext)
-│   ├── services/       # Business Logic (VoiceService, API)
-│   ├── App.tsx         # Main Application Layout
-│   └── main.tsx        # Entry Point
-├── public/             # Static Assets
-├── .env                # Environment Variables
-├── package.json        # Dependencies
-└── vite.config.ts      # Vite Configuration
-```
-
-## ⚙️ Setup & Installation
-
-1.  **Clone the repository**:
-    ```bash
-    git clone https://github.com/grishma-blip/Sahayak_Frontend.git
-    cd Sahayak_Frontend
-    ```
-
-2.  **Install dependencies**:
-    ```bash
-    npm install
-    ```
-
-3.  **Configure Environment**:
-    Create a `.env` file in the root directory:
-    ```env
-    VITE_GOOGLE_API_KEY=your_google_cloud_api_key
-    ```
-
-4.  **Start the Development Server**:
-    ```bash
-    npm run dev
-    ```
-    The app will open at `http://localhost:5173`.
-
-5.  **Build for Production**:
-    ```bash
-    npm run build
-    ```
-
-## 👥 Team
-
-**Team Name**: Bombay.Bytes
-
-**Members**:
+**Team Members**:
 - **Grishma Thakare** ([@grishma-blip](https://github.com/grishma-blip))
 - **Ashutosh Rai** ([@ashurai84](https://github.com/ashurai84))
 
-## 🤝 Contributing
+## 📂 Project Structure
 
-1.  Fork the repository.
-2.  Create a feature branch (`git checkout -b feature/amazing-feature`).
-3.  Commit your changes (`git commit -m 'Add some amazing feature'`).
-4.  Push to the branch (`git push origin feature/amazing-feature`).
-5.  Open a Pull Request.
+This monorepo is organized into two main parts:
+
+- **project/**: The **Frontend** application built with React, Vite, and TensorFlow.js.
+- **hackathon_blindeye_backend/**: The **Backend** server built with Node.js and Express.
+
+---
+
+## 📱 Frontend (`project/`)
+
+The user-facing interface that runs in the browser.
+
+### Features
+- **Voice-First Interface**: Complete hands-free navigation.
+- **Real-time Object Detection**: Offline neural network (COCO-SSD) for detecting obstacles.
+- **Navigation & Maps**: GPS-based outdoor navigation.
+- **Emergency SOS**: Simulates sending emergency alerts.
+
+### Setup
+1.  Navigate to the frontend folder:
+    ```bash
+    cd project
+    ```
+2.  Install dependencies:
+    ```bash
+    npm install
+    ```
+3.  Start the app:
+    ```bash
+    npm run dev
+    ```
+
+---
+
+## 🖥️ Backend (`hackathon_blindeye_backend/`)
+
+The server-side component handling computer vision proxying and logging.
+
+### Features
+- **Google Cloud Vision Integraton**: Secured proxy for image analysis.
+- **Event Logging**: Centralized tracking of user actions.
+- **Health Checks**: Server status monitoring.
+
+### Setup
+1.  Navigate to the backend server folder:
+    ```bash
+    cd hackathon_blindeye_backend/http-server
+    ```
+2.  Install dependencies:
+    ```bash
+    npm install
+    ```
+3.  Start the server:
+    ```bash
+    npm start
+    ```
 
 ## 📄 License
 

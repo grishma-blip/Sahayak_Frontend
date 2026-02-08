@@ -1,11 +1,14 @@
-import { Mic, Phone, Navigation, Eye } from 'lucide-react';
+import { Mic, Phone, Navigation, Eye, MicOff } from 'lucide-react';
 import { voiceService } from '../services/voiceService';
+import { useVoice } from '../contexts/VoiceContext';
 
 interface HomeProps {
-    onNavigate: (tab: 'navigation' | 'sos' | 'settings') => void;
+    onNavigate: (tab: 'navigation' | 'detection' | 'sos' | 'settings') => void;
 }
 
 export function Home({ onNavigate }: HomeProps) {
+    const { isListening, toggleListening } = useVoice();
+
     return (
         <div className="h-full flex flex-col bg-gray-50 overflow-y-auto pb-20">
             {/* Header */}
@@ -17,30 +20,47 @@ export function Home({ onNavigate }: HomeProps) {
                     </div>
                     <p className="text-sm text-gray-500">सहायक — आपका सुरक्षित साथी</p>
                 </div>
-                <div className="flex items-center gap-2 px-3 py-1 bg-green-100 rounded-full">
-                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-                    <span className="text-xs font-semibold text-green-700">Active</span>
+                <div className="flex gap-2">
+                    <button
+                        onClick={() => voiceService.testVoice()}
+                        className="p-2 bg-gray-200 rounded-full text-xs font-bold text-gray-700 active:bg-gray-300"
+                        title="Test Voice Output"
+                    >
+                        Test Voice
+                    </button>
+                    <div className="flex items-center gap-2 px-3 py-1 bg-green-100 rounded-full">
+                        <div className={`w-2 h-2 ${isListening ? 'bg-red-500 animate-pulse' : 'bg-green-500'} rounded-full`} />
+                        <span className={`text-xs font-semibold ${isListening ? 'text-red-700' : 'text-green-700'}`}>
+                            {isListening ? 'Listening' : 'Active'}
+                        </span>
+                    </div>
                 </div>
             </header>
 
             <div className="p-6 space-y-6">
                 {/* Voice Assistant Card */}
-                <div className="bg-gradient-to-r from-gray-900 to-gray-800 rounded-2xl p-6 text-white shadow-lg relative overflow-hidden">
+                <div className={`bg-gradient-to-r ${isListening ? 'from-red-900 to-red-800' : 'from-gray-900 to-gray-800'} rounded-2xl p-6 text-white shadow-lg relative overflow-hidden transition-colors duration-300`}>
                     <div className="relative z-10 flex items-center justify-between">
                         <div>
-                            <h2 className="text-xl font-bold mb-1">Voice Assistant Ready</h2>
-                            <p className="text-gray-300 text-sm">Tap or say <span className="text-green-400 font-semibold">"Hey Sahayak"</span></p>
-                            <p className="text-gray-400 text-xs">"हे सहायक" बोलें</p>
+                            <h2 className="text-xl font-bold mb-1">
+                                {isListening ? 'Listening...' : 'Voice Assistant Ready'}
+                            </h2>
+                            <p className="text-gray-300 text-sm">
+                                {isListening ? 'Say a command like "Navigate"' : 'Tap or say "Hey Sahayak"'}
+                            </p>
+                            <p className="text-gray-400 text-xs">
+                                {isListening ? 'सुन रहा हूँ...' : '"हे सहायक" बोलें'}
+                            </p>
                         </div>
                         <button
-                            onClick={() => voiceService.speak("Listening for commands", "normal")}
-                            className="w-12 h-12 bg-green-600 rounded-full flex items-center justify-center hover:bg-green-500 transition-colors shadow-lg active:scale-95"
+                            onClick={toggleListening}
+                            className={`w-12 h-12 ${isListening ? 'bg-red-600 hover:bg-red-500' : 'bg-green-600 hover:bg-green-500'} rounded-full flex items-center justify-center transition-colors shadow-lg active:scale-95`}
                         >
-                            <Mic className="w-6 h-6 text-white" />
+                            {isListening ? <MicOff className="w-6 h-6 text-white" /> : <Mic className="w-6 h-6 text-white" />}
                         </button>
                     </div>
                     {/* Decorative circles */}
-                    <div className="absolute top-0 right-0 w-32 h-32 bg-green-500 opacity-10 rounded-full blur-2xl transform translate-x-10 -translate-y-10" />
+                    <div className={`absolute top-0 right-0 w-32 h-32 ${isListening ? 'bg-red-500' : 'bg-green-500'} opacity-10 rounded-full blur-2xl transform translate-x-10 -translate-y-10 transition-colors duration-300`} />
                 </div>
 
 
@@ -71,7 +91,10 @@ export function Home({ onNavigate }: HomeProps) {
                     </button>
 
                     <button
-                        onClick={() => voiceService.speak("Opening detection mode", "normal")}
+                        onClick={() => {
+                            onNavigate('detection');
+                            voiceService.speak("Opening detection mode", "normal");
+                        }}
                         className="group bg-white border border-gray-200 p-6 rounded-2xl shadow-sm flex flex-col items-center text-center hover:border-blue-200 hover:bg-blue-50 transition-all active:scale-95"
                     >
                         <div className="w-14 h-14 bg-blue-100 rounded-2xl flex items-center justify-center mb-4 group-hover:bg-blue-200 transition-colors">

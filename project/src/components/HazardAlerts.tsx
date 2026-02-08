@@ -152,15 +152,8 @@ export function HazardAlerts() {
 
   if (hazards.length === 0) return null;
 
-  return (
-    <div className="fixed top-0 left-0 right-0 z-50 pointer-events-none">
-      <div className="max-w-2xl mx-auto p-4 space-y-3 pointer-events-auto">
-        {hazards.map((hazard) => (
-          <HazardCard key={hazard.id} hazard={hazard} onDismiss={() => removeHazard(hazard.id)} />
-        ))}
-      </div>
-    </div>
-  );
+  // Visual alerts disabled as per user request, only voice feedback remains
+  return null;
 }
 
 function HazardCard({ hazard, onDismiss }: { hazard: Hazard; onDismiss: () => void }) {

@@ -1,10 +1,8 @@
-import { useState, useEffect, useRef } from 'react';
-import { Navigation2, Mic, Search, MapPin } from 'lucide-react';
+import { useState } from 'react';
+import { Navigation2, Mic, Search } from 'lucide-react';
 import { useNavigation } from '../contexts/NavigationContext';
 import { voiceService } from '../services/voiceService';
-import { mappls } from 'mappls-web-maps';
-
-const mapplsClassObject = new mappls();
+import { SimpleMap } from './SimpleMap';
 
 export function NavigationScreen() {
   const {
@@ -15,8 +13,6 @@ export function NavigationScreen() {
   } = useNavigation();
 
   const [destinationInput, setDestinationInput] = useState('');
-  const [mapError, setMapError] = useState<string | null>(null);
-  const mapRef = useRef<any>(null);
 
   const handleStartNavigation = () => {
     if (destinationInput.trim()) {
@@ -50,65 +46,6 @@ export function NavigationScreen() {
       alert('Voice recognition not supported in this browser');
     }
   };
-
-  useEffect(() => {
-    if (isNavigating) {
-      // Initialize Mapple
-      const loadMap = () => {
-        try {
-          if (mapRef.current) return;
-
-          const accessToken = import.meta.env.VITE_MAPPLS_ACCESS_TOKEN;
-          if (!accessToken) {
-            throw new Error('MapmyIndia / Mappls access token is not configured');
-          }
-
-          const loadObject = {
-            map: true,
-            version: '3.0',
-            libraries: [''],
-            plugins: [''],
-          };
-
-          const mapProps = {
-            center: [28.61, 77.23], // Default New Delhi
-            zoom: 12,
-            geolocation: true,
-            clickableIcons: true,
-          };
-
-          mapplsClassObject.initialize(accessToken, loadObject, () => {
-            const mapObject = mapplsClassObject.Map({
-              id: 'mappls-map',
-              properties: mapProps,
-            });
-
-            mapObject.on('load', () => {
-              console.log('Mapple loaded');
-              // Optional: Add marker or directions plug-in here
-            });
-
-            mapRef.current = mapObject;
-          });
-        } catch (error: any) {
-          console.error("Error initializing Mapple:", error);
-          setMapError("MapmyIndia API Key missing or invalid. Please check configuration.");
-        }
-      };
-
-      // Slight delay to ensure DOM is ready
-      setTimeout(loadMap, 100);
-
-      return () => {
-        if (mapRef.current && typeof mapRef.current.remove === 'function') {
-          try {
-            mapRef.current.remove();
-          } catch (e) { /* ignore cleanup errors */ }
-        }
-        mapRef.current = null;
-      };
-    }
-  }, [isNavigating]);
 
   return (
     <div className="h-full flex flex-col bg-gray-50">
@@ -215,20 +152,9 @@ export function NavigationScreen() {
             </div>
           </div>
 
-          {/* Mapple Container */}
+          {/* Live Map Container */}
           <div className="w-full h-full relative">
-            <div id="mappls-map" className="w-full h-full bg-gray-200"></div>
-
-            {/* Error Placeholder for Verification */}
-            {mapError && (
-              <div className="absolute inset-0 flex items-center justify-center bg-gray-100/90 p-8 text-center">
-                <div>
-                  <MapPin className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                  <h3 className="text-xl font-bold text-gray-800 mb-2">Map Loading...</h3>
-                  <p className="text-gray-500 text-sm max-w-xs mx-auto">{mapError}</p>
-                </div>
-              </div>
-            )}
+            <SimpleMap destination={destination} />
           </div>
 
           {/* End Navigation Floating Button */}
@@ -248,6 +174,27 @@ export function NavigationScreen() {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+export function EndNavigationButton() {
+  const { isNavigating, stopNavigation } = useNavigation();
+
+  if (!isNavigating) return null;
+
+  return (
+    <div className="p-4 bg-white border-t border-gray-200">
+      <button
+        onClick={() => {
+          stopNavigation();
+          voiceService.speak('Ending navigation', 'low');
+        }}
+        className="w-full bg-red-50 text-red-600 border border-red-200 rounded-xl py-3 text-lg font-bold shadow-sm hover:bg-red-100 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+      >
+        <div className="w-2 h-2 bg-red-600 rounded-sm" />
+        <span>End Navigation</span>
+      </button>
     </div>
   );
 }

@@ -1,7 +1,8 @@
-import { Home, Navigation, Phone, Settings } from 'lucide-react';
+import { Home, Navigation, Phone, Settings, Mic } from 'lucide-react';
 import { voiceService } from '../services/voiceService';
+import { useVoice } from '../contexts/VoiceContext';
 
-type Tab = 'home' | 'navigation' | 'sos' | 'settings';
+type Tab = 'home' | 'navigation' | 'detection' | 'sos' | 'settings';
 
 interface BottomNavProps {
   activeTab: Tab;
@@ -9,6 +10,8 @@ interface BottomNavProps {
 }
 
 export function BottomNav({ activeTab, onTabChange }: BottomNavProps) {
+  const { isListening, toggleListening } = useVoice();
+
   const tabs = [
     { id: 'home' as Tab, icon: Home, label: 'Home' },
     { id: 'navigation' as Tab, icon: Navigation, label: 'Navigate' },
@@ -17,8 +20,21 @@ export function BottomNav({ activeTab, onTabChange }: BottomNavProps) {
   ];
 
   return (
-    <nav className="bg-white border-t border-gray-200 pb-safe">
-      <div className="grid grid-cols-4">
+    <nav className="bg-white border-t border-gray-200 pb-safe relative z-50">
+      {/* Floating Mic Indicator/Toggle */}
+      <div className="absolute -top-6 left-1/2 transform -translate-x-1/2">
+        <button
+          onClick={toggleListening}
+          className={`w-12 h-12 rounded-full shadow-lg flex items-center justify-center transition-all ${isListening
+            ? 'bg-red-600 text-white animate-pulse ring-4 ring-red-100'
+            : 'bg-green-600 text-white hover:bg-green-500'
+            }`}
+        >
+          <Mic className="w-5 h-5" />
+        </button>
+      </div>
+
+      <div className="grid grid-cols-4 pt-4">
         {tabs.map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;

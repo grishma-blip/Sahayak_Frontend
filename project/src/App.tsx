@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { NavigationProvider } from './contexts/NavigationContext';
-import { NavigationScreen } from './components/NavigationScreen';
+import { VoiceProvider } from './contexts/VoiceContext';
+import { NavigationScreen, EndNavigationButton } from './components/NavigationScreen';
+import { DetectionScreen } from './components/DetectionScreen';
 import { Settings } from './components/Settings';
 import { HazardAlerts, HazardSimulator } from './components/HazardAlerts';
 import { EmergencyScreen, EmergencySOSOverlay } from './components/EmergencySOS';
@@ -10,7 +12,7 @@ import { Home } from './components/Home';
 import { healthCheck } from './services/api';
 import { sendEvent } from './services/eventService';
 
-type Tab = 'home' | 'navigation' | 'sos' | 'settings';
+type Tab = 'home' | 'navigation' | 'detection' | 'sos' | 'settings';
 
 function App() {
   const [activeTab, setActiveTab] = useState<Tab>('home');
@@ -26,22 +28,26 @@ function App() {
 
   return (
     <NavigationProvider>
-      <div className="h-[100dvh] flex flex-col overflow-hidden bg-gray-50">
-        <HazardAlerts />
-        <EmergencySOSOverlay />
+      <VoiceProvider onNavigate={setActiveTab}>
+        <div className="h-[100dvh] flex flex-col overflow-hidden bg-gray-50">
+          <HazardAlerts />
+          <EmergencySOSOverlay />
 
-        <main className="flex-1 overflow-hidden relative">
-          {activeTab === 'home' && <Home onNavigate={setActiveTab} />}
-          {activeTab === 'navigation' && <NavigationScreen />}
-          {activeTab === 'sos' && <EmergencyScreen />}
-          {activeTab === 'settings' && <Settings onClose={() => setActiveTab('home')} />}
-        </main>
+          <main className="flex-1 overflow-hidden relative">
+            {activeTab === 'home' && <Home onNavigate={setActiveTab} />}
+            {activeTab === 'navigation' && <NavigationScreen />}
+            {activeTab === 'detection' && <DetectionScreen />}
+            {activeTab === 'sos' && <EmergencyScreen />}
+            {activeTab === 'settings' && <Settings onClose={() => setActiveTab('home')} />}
+          </main>
 
-        {activeTab === 'navigation' && <HazardSimulator />}
-        <FallDetector />
+          {activeTab === 'navigation' && <EndNavigationButton />}
+          {activeTab === 'navigation' && <HazardSimulator />}
+          <FallDetector />
 
-        <BottomNav activeTab={activeTab} onTabChange={setActiveTab} />
-      </div>
+          <BottomNav activeTab={activeTab} onTabChange={setActiveTab} />
+        </div>
+      </VoiceProvider>
     </NavigationProvider>
   );
 }

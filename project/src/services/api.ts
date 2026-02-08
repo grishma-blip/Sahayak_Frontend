@@ -3,6 +3,10 @@ const resolveDefaultBaseUrl = () => {
     return 'http://localhost:3000';
   }
 
+  if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+    return '';
+  }
+
   const protocol = window.location.protocol === 'https:' ? 'https:' : 'http:';
   const hostname = window.location.hostname || 'localhost';
   return `${protocol}//${hostname}:3000`;

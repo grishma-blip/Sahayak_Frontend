@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { NavigationProvider } from './contexts/NavigationContext';
 import { VoiceProvider } from './contexts/VoiceContext';
-import { NavigationScreen, EndNavigationButton } from './components/NavigationScreen';
+import { NavigationScreen } from './components/NavigationScreen';
 import { DetectionScreen } from './components/DetectionScreen';
 import { Settings } from './components/Settings';
 import { HazardAlerts, HazardSimulator } from './components/HazardAlerts';
@@ -33,6 +33,7 @@ function App() {
           <HazardAlerts />
           <EmergencySOSOverlay />
 
+
           <main className="flex-1 overflow-hidden relative">
             {activeTab === 'home' && <Home onNavigate={setActiveTab} />}
             {activeTab === 'navigation' && <NavigationScreen />}
@@ -41,7 +42,6 @@ function App() {
             {activeTab === 'settings' && <Settings onClose={() => setActiveTab('home')} />}
           </main>
 
-          {activeTab === 'navigation' && <EndNavigationButton />}
           {activeTab === 'navigation' && <HazardSimulator />}
           <FallDetector />
 

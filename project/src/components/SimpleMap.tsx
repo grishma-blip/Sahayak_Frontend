@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import { useNavigation } from '../contexts/NavigationContext';
 
 // Fix for default marker icons in Leaflet
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -15,128 +16,133 @@ interface SimpleMapProps {
 }
 
 export function SimpleMap({ destination }: SimpleMapProps) {
+  const { currentLocation } = useNavigation();
   const mapRef = useRef<L.Map | null>(null);
   const mapContainerRef = useRef<HTMLDivElement>(null);
-  const [userLocation, setUserLocation] = useState<[number, number] | null>(null);
   const userMarkerRef = useRef<L.Marker | null>(null);
   const destinationMarkerRef = useRef<L.Marker | null>(null);
   const routeLayerRef = useRef<L.Polyline | null>(null);
 
+  // Initialize Map
+  const initMap = (coords: [number, number]) => {
+    if (!mapContainerRef.current || mapRef.current) return;
+
+    try {
+      // Clean up any existing map instance on the container element
+      const container = mapContainerRef.current as any;
+      if (container._leaflet_id) {
+        container._leaflet_id = null;
+        container.innerHTML = '';
+      }
+
+      const map = L.map(mapContainerRef.current, {
+        center: coords,
+        zoom: 16, // Zoom level adjusted for navigation
+        zoomControl: false, // Cleaner UI
+        attributionControl: false,
+      });
+
+      // Add OpenStreetMap tiles
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+      }).addTo(map);
+
+      // Add user location marker
+      const userMarker = L.marker(coords, {
+        icon: L.divIcon({
+          className: 'user-location-marker',
+          html: `<div style="width: 24px; height: 24px; background: #3B82F6; border: 3px solid white; border-radius: 50%; box-shadow: 0 4px 12px rgba(59, 130, 246, 0.5); position: relative;">
+                  <div style="position: absolute; width: 40px; height: 40px; background: rgba(59, 130, 246, 0.2); border-radius: 50%; top: 50%; left: 50%; transform: translate(-50%, -50%); animation: pulse 2s infinite;"></div>
+                 </div>
+                 <style>
+                  @keyframes pulse {
+                    0% { transform: translate(-50%, -50%) scale(0.8); opacity: 0.8; }
+                    100% { transform: translate(-50%, -50%) scale(2); opacity: 0; }
+                  }
+                 </style>`,
+          iconSize: [24, 24],
+        }),
+        zIndexOffset: 1000, // Ensure user marker is on top
+      }).addTo(map);
+
+      userMarkerRef.current = userMarker;
+      mapRef.current = map;
+    } catch (e) {
+      console.error("Map initialization failed", e);
+    }
+  };
+
   useEffect(() => {
-    let isMounted = true;
+    // If we have a location from context
+    if (currentLocation) {
+      const coords: [number, number] = [currentLocation.lat, currentLocation.lng];
 
-    if (!mapContainerRef.current) return;
+      if (!mapRef.current) {
+        initMap(coords);
+      } else {
+        // Update marker position
+        if (userMarkerRef.current) {
+          userMarkerRef.current.setLatLng(coords);
+        }
+        // Optional: Smooth pan
+        // mapRef.current.panTo(coords);
+      }
+    } else {
+      // Fallback for initialization if location is null (e.g. permission pending)
+      if (!mapRef.current) {
+        // Default: New Delhi
+        initMap([28.6139, 77.2090]);
+      }
+    }
 
-    // Helper to completely reset the map container
-    const resetMapContainer = () => {
+    return () => {
+      // Cleanup on unmount
       if (mapRef.current) {
         mapRef.current.remove();
         mapRef.current = null;
       }
-
-      if (mapContainerRef.current) {
-        const container = mapContainerRef.current as any;
-        if (container._leaflet_id) {
-          container._leaflet_id = null;
-        }
-        mapContainerRef.current.innerHTML = '';
-      }
     };
+  }, []); // Run once on mount mainly, but initialization might depend on location availability
 
-    // Initial cleanup
-    resetMapContainer();
+  // React to location updates specifically for the marker movement
+  useEffect(() => {
+    if (currentLocation && mapRef.current && userMarkerRef.current) {
+      const coords: [number, number] = [currentLocation.lat, currentLocation.lng];
+      userMarkerRef.current.setLatLng(coords);
+      // We could pan here if we want to follow user
+    } else if (currentLocation && !mapRef.current) {
+      // Late init if it wasn't ready
+      initMap([currentLocation.lat, currentLocation.lng]);
+    }
+  }, [currentLocation]);
 
-    // Get user location
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          if (!isMounted) return;
 
-          const coords: [number, number] = [position.coords.latitude, position.coords.longitude];
-          setUserLocation(coords);
-
-          try {
-            // Extra safety check
-            if (mapContainerRef.current && (mapContainerRef.current as any)._leaflet_id) {
-              resetMapContainer();
-            }
-
-            // Initialize map centered on user location
-            const map = L.map(mapContainerRef.current!, {
-              center: coords,
-              zoom: 15,
-              zoomControl: true,
-            });
-
-            // Add OpenStreetMap tiles
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-              attribution: '© OpenStreetMap contributors',
-              maxZoom: 19,
-            }).addTo(map);
-
-            // Add user location marker
-            const userMarker = L.marker(coords, {
-              icon: L.divIcon({
-                className: 'user-location-marker',
-                html: `<div style="width: 20px; height: 20px; background: #3B82F6; border: 3px solid white; border-radius: 50%; box-shadow: 0 2px 8px rgba(0,0,0,0.3);"></div>`,
-                iconSize: [20, 20],
-              }),
-            }).addTo(map);
-
-            userMarkerRef.current = userMarker;
-            mapRef.current = map;
-          } catch (e) {
-            console.error("Map initialization failed", e);
-            // Retry once after small delay if needed or just fail gracefully
-          }
-        },
-        (error) => {
-          if (!isMounted) return;
-          console.error('Geolocation error:', error);
-
-          // Fallback to default location (New Delhi)
-          const defaultCoords: [number, number] = [28.6139, 77.2090];
-          setUserLocation(defaultCoords);
-
-          try {
-            if (mapContainerRef.current && (mapContainerRef.current as any)._leaflet_id) {
-              resetMapContainer();
-            }
-
-            const map = L.map(mapContainerRef.current!, {
-              center: defaultCoords,
-              zoom: 13,
-              zoomControl: true,
-            });
-
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-              attribution: '© OpenStreetMap contributors',
-              maxZoom: 19,
-            }).addTo(map);
-
-            mapRef.current = map;
-          } catch (e) {
-            console.error("Fallback map initialization failed", e);
-          }
+  // Update route and destination marker
+  useEffect(() => {
+    if (!mapRef.current || !currentLocation || !destination) {
+      // If destination is cleared, remove markers
+      if (!destination) {
+        if (destinationMarkerRef.current) {
+          destinationMarkerRef.current.remove();
+          destinationMarkerRef.current = null;
         }
-      );
+        if (routeLayerRef.current) {
+          routeLayerRef.current.remove();
+          routeLayerRef.current = null;
+        }
+      }
+      return;
     }
 
-    return () => {
-      isMounted = false;
-      resetMapContainer();
-    };
-  }, []);
-
-  // Add destination marker and route when destination changes
-  useEffect(() => {
-    if (!mapRef.current || !userLocation || !destination) return;
+    const userCoords: [number, number] = [currentLocation.lat, currentLocation.lng];
 
     // For demo: Simulate destination location near user
     // In production, you'd geocode the destination string
+    // Calculate a pseudo-random position based on destination string length to keep it consistent
+    const offset = (destination.length % 10) * 0.001 + 0.005;
     const destinationCoords: [number, number] = [
-      userLocation[0] + 0.01,
-      userLocation[1] + 0.01,
+      userCoords[0] + offset,
+      userCoords[1] + offset,
     ];
 
     // Remove old destination marker and route
@@ -151,33 +157,42 @@ export function SimpleMap({ destination }: SimpleMapProps) {
     const destMarker = L.marker(destinationCoords, {
       icon: L.divIcon({
         className: 'destination-marker',
-        html: `<div style="width: 30px; height: 30px; background: #EF4444; border: 3px solid white; border-radius: 50%; box-shadow: 0 2px 8px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold;">📍</div>`,
+        html: `<div style="width: 30px; height: 30px; background: #EF4444; border: 3px solid white; border-radius: 50%; box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 18px;">📍</div>`,
         iconSize: [30, 30],
+        iconAnchor: [15, 30], // Tip of the pin
       }),
     }).addTo(mapRef.current);
 
     destinationMarkerRef.current = destMarker;
 
     // Draw simple route line
-    const routeLine = L.polyline([userLocation, destinationCoords], {
+    const routeLine = L.polyline([userCoords, destinationCoords], {
       color: '#3B82F6',
-      weight: 4,
-      opacity: 0.7,
-      dashArray: '10, 10',
+      weight: 6,
+      opacity: 0.8,
+      lineCap: 'round',
+      lineJoin: 'round',
+      dashArray: '1, 10',
     }).addTo(mapRef.current);
+
+    // Animate the dash array to simulate walking
+    // Note: Leaflet doesn't support CSS animation on paths easily, avoiding complex DOM manipulation for now.
+    // Instead just use a solid solid line for better visibility
+    routeLine.setStyle({ dashArray: undefined });
+
 
     routeLayerRef.current = routeLine;
 
     // Fit map to show both markers
-    const bounds = L.latLngBounds([userLocation, destinationCoords]);
-    mapRef.current.fitBounds(bounds, { padding: [50, 50] });
-  }, [destination, userLocation]);
+    const bounds = L.latLngBounds([userCoords, destinationCoords]);
+    mapRef.current.fitBounds(bounds, { padding: [50, 50], maxZoom: 18 });
+  }, [destination, currentLocation]);
 
   return (
     <div
       ref={mapContainerRef}
       className="w-full h-full"
-      style={{ background: '#f0f0f0' }}
+      style={{ background: '#e5e7eb', zIndex: 0 }}
     />
   );
 }

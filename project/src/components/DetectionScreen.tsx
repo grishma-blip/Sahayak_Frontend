@@ -33,36 +33,54 @@ export function DetectionScreen() {
     loadModel();
   }, []);
 
-  const detectFrame = async () => {
-    if (
-      !model ||
-      !videoRef.current ||
-      !canvasRef.current ||
-      !isRunningRef.current
-    ) return;
+  // Rough distance estimation based on object height in frame
+  // Formula: Distance = (Real Height * Focal Length) / Image Height
+  // We use a simplified heuristic mapping bbox height percentage to feet
+  // Rough distance estimation based on object height in frame
+  // Formula: Distance = (Real Height * Focal Length) / Image Height
+  // We use a simplified heuristic mapping bbox height percentage to feet
+  const estimateDistance = (bbox: number[], className: string): string => {
+    const [_, __, ___, height] = bbox;
+    const screenHeight = videoRef.current?.videoHeight || 480;
+    const heightPercentage = height / screenHeight;
 
-    const video = videoRef.current;
-    if (video.readyState !== 4) {
-      requestRef.current = requestAnimationFrame(detectFrame);
-      return;
+    // Heuristic: As object gets smaller (heightPercentage decreases), distance increases.
+    let distanceFeet = 0;
+    if (className === 'person') {
+      if (heightPercentage > 0.8) distanceFeet = 3;
+      else if (heightPercentage > 0.6) distanceFeet = 5;
+      else if (heightPercentage > 0.4) distanceFeet = 8;
+      else if (heightPercentage > 0.2) distanceFeet = 15;
+      else distanceFeet = 25;
+    } else {
+      // For smaller objects
+      if (heightPercentage > 0.5) distanceFeet = 2;
+      else if (heightPercentage > 0.3) distanceFeet = 4;
+      else if (heightPercentage > 0.15) distanceFeet = 7;
+      else distanceFeet = 12;
     }
 
-    try {
-      const predictions = await model.detect(video);
-      setCurrentDetections(predictions);
-      drawPredictions(predictions);
-      speakDetections(predictions);
+    return `${distanceFeet} feet`;
+  };
 
-      if (isRunningRef.current) {
-        requestRef.current = requestAnimationFrame(detectFrame);
+  const speakDetections = (predictions: cocoSsd.DetectedObject[]) => {
+    const now = Date.now();
+    const cooldown = 4000; // slightly faster updates
+
+    predictions.forEach(prediction => {
+      // Only speak new or high confidence detections
+      if (prediction.score > 0.65) {
+        const lastSpokenTime = lastSpokenRef.current[prediction.class] || 0;
+
+        if (now - lastSpokenTime > cooldown) {
+          const distance = estimateDistance(prediction.bbox, prediction.class);
+          const feedback = `${prediction.class} ${distance} ahead`;
+
+          voiceService.speak(feedback, 'normal');
+          lastSpokenRef.current[prediction.class] = now;
+        }
       }
-    } catch (err) {
-      console.error('Detection error:', err);
-      // Continue loop even on error to retry
-      if (isRunningRef.current) {
-        requestRef.current = requestAnimationFrame(detectFrame);
-      }
-    }
+    });
   };
 
   const getEstimatedDistance = (className: string, bboxHeight: number, frameHeight: number) => {
@@ -130,27 +148,36 @@ export function DetectionScreen() {
     });
   };
 
-  const speakDetections = (predictions: cocoSsd.DetectedObject[]) => {
+  const detectFrame = async () => {
+    if (
+      !model ||
+      !videoRef.current ||
+      !canvasRef.current ||
+      !isRunningRef.current
+    ) return;
+
     const video = videoRef.current;
-    if (!video) return;
+    if (video.readyState !== 4) {
+      requestRef.current = requestAnimationFrame(detectFrame);
+      return;
+    }
 
-    const now = Date.now();
-    const cooldown = 4000; // Slightly faster updates
+    try {
+      const predictions = await model.detect(video);
+      setCurrentDetections(predictions);
+      drawPredictions(predictions);
+      speakDetections(predictions);
 
-    predictions.forEach(prediction => {
-      // Only speak new or high confidence detections
-      if (prediction.score > 0.6) {
-        const lastSpokenTime = lastSpokenRef.current[prediction.class] || 0;
-
-        if (now - lastSpokenTime > cooldown) {
-          const [, , , height] = prediction.bbox;
-          const distance = getEstimatedDistance(prediction.class, height, video.videoHeight);
-
-          voiceService.speak(`${prediction.class}, ${distance} meters away`, 'normal');
-          lastSpokenRef.current[prediction.class] = now;
-        }
+      if (isRunningRef.current) {
+        requestRef.current = requestAnimationFrame(detectFrame);
       }
-    });
+    } catch (err) {
+      console.error('Detection error:', err);
+      // Continue loop even on error to retry
+      if (isRunningRef.current) {
+        requestRef.current = requestAnimationFrame(detectFrame);
+      }
+    }
   };
 
   const startCamera = async () => {

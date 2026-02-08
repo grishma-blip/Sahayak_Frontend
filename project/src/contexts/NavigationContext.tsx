@@ -68,6 +68,35 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
   });
 
   useEffect(() => {
+    if (!navigator.geolocation) {
+      console.warn('Geolocation is not supported');
+      return;
+    }
+
+    const watchId = navigator.geolocation.watchPosition(
+      (position) => {
+        setState(prev => ({
+          ...prev,
+          currentLocation: {
+            lat: position.coords.latitude,
+            lng: position.coords.longitude
+          }
+        }));
+      },
+      (error) => {
+        console.error('Geolocation error:', error);
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 0
+      }
+    );
+
+    return () => navigator.geolocation.clearWatch(watchId);
+  }, []);
+
+  useEffect(() => {
     if (state.driftDetected && state.isNavigating) {
       const diff = Math.abs(state.heading - state.expectedHeading);
       if (diff > 15) {
@@ -101,7 +130,8 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
       ...prev,
       isNavigating: true,
       destination,
-      currentLocation: { lat: 28.6139, lng: 77.2090 },
+      // Keep current location if available, otherwise fallback or wait for update
+      currentLocation: prev.currentLocation || { lat: 28.6139, lng: 77.2090 },
     }));
     voiceService.speak(`Navigation started to ${destination}`, 'normal');
     hapticService.vibrateSuccess();
@@ -180,10 +210,25 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
 
   const triggerEmergency = () => {
     voiceService.speak('Sending emergency alert to your caregivers', 'emergency');
+
+    // Original logging
     console.log('Emergency triggered!', {
       location: state.currentLocation,
       contacts: state.emergencyContacts,
     });
+
+    // SMS Redirection
+    const phoneNumber = "9324120767";
+    const message = "EMERGENCY: Sahayak user may have fallen. Immediate assistance needed";
+
+    // Use window.location.href to trigger SMS app
+    // Encode the message to ensure special characters work
+    const smsUrl = `sms:${phoneNumber}?body=${encodeURIComponent(message)}`;
+
+    // Slight delay to allow voice to start speaking
+    setTimeout(() => {
+      window.location.href = smsUrl;
+    }, 1500);
   };
 
   const addEmergencyContact = (contact: Omit<EmergencyContact, 'id'>) => {
